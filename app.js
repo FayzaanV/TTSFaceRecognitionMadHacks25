@@ -114,10 +114,12 @@ function onResults(results) {
         let normalizedX = 1 - noseTip.x; // Invert X for natural left-right
         let normalizedY = noseTip.y;
 
-        // Apply sensitivity multiplier for easier movement
-        const sensitivity = 1.4;
-        normalizedX = (normalizedX - 0.5) * sensitivity + 0.5;
-        normalizedY = (normalizedY - 0.5) * sensitivity + 0.5;
+        // Apply sensitivity multiplier for easier movement (higher = more sensitive)
+        // Separate sensitivity for X and Y axes - Y needs more sensitivity for up/down
+        const sensitivityX = 2.5;
+        const sensitivityY = 3.5; // Higher sensitivity for vertical movement
+        normalizedX = (normalizedX - 0.5) * sensitivityX + 0.5;
+        normalizedY = (normalizedY - 0.5) * sensitivityY + 0.5;
 
         // Clamp values to stay within bounds [0, 1]
         normalizedX = Math.max(0, Math.min(1, normalizedX));
@@ -365,10 +367,69 @@ async function speakText(text, emotion) {
 
     } catch (error) {
         console.error('TTS Error:', error);
+        
+        // Fallback to Web Speech API if Fish Audio fails (CORS or other issues)
+        if (error.message.includes('CORS') || error.message.includes('Failed to fetch')) {
+            console.log('Fish Audio API failed, falling back to Web Speech API');
+            return speakWithWebSpeech(text, emotion);
+        }
+        
         status.textContent = 'Speech generation failed';
         status.style.color = '#ef4444';
-        alert(`Error generating speech: ${error.message}`);
+        alert(`Error generating speech: ${error.message}. Using browser's built-in speech instead.`);
     }
+}
+
+// Fallback: Web Speech API (works without API key, no CORS issues)
+function speakWithWebSpeech(text, emotion) {
+    if (!('speechSynthesis' in window)) {
+        alert('Speech synthesis not supported in this browser');
+        return;
+    }
+
+    // Cancel any ongoing speech
+    window.speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    
+    // Adjust speech rate and pitch based on emotion
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+    
+    if (emotion === 'happy') {
+        utterance.rate = 1.1;
+        utterance.pitch = 1.2;
+    } else if (emotion === 'sad') {
+        utterance.rate = 0.9;
+        utterance.pitch = 0.8;
+    } else if (emotion === 'angry') {
+        utterance.rate = 1.2;
+        utterance.pitch = 1.1;
+    } else if (emotion === 'surprised') {
+        utterance.rate = 1.15;
+        utterance.pitch = 1.3;
+    }
+
+    utterance.onstart = () => {
+        status.textContent = 'Speaking...';
+        status.style.color = '#10b981';
+    };
+
+    utterance.onend = () => {
+        status.textContent = 'Speech complete!';
+        status.style.color = '#10b981';
+        setTimeout(() => {
+            status.textContent = 'Tracking active - Move your nose!';
+        }, 2000);
+    };
+
+    utterance.onerror = (error) => {
+        console.error('Web Speech Error:', error);
+        status.textContent = 'Speech failed';
+        status.style.color = '#ef4444';
+    };
+
+    window.speechSynthesis.speak(utterance);
 }
 
 // Start camera and tracking
