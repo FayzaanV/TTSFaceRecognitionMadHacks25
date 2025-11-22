@@ -129,8 +129,8 @@ function onResults(results) {
 
         // Apply sensitivity multiplier for easier movement (higher = more sensitive)
         // Separate sensitivity for X and Y axes - Y needs more sensitivity for up/down
-        const sensitivityX = 2.5;
-        const sensitivityY = 3.5; // Higher sensitivity for vertical movement
+        const sensitivityX = 4.0;  // Increased from 2.5 for tilting instead of full head movement
+        const sensitivityY = 5.0;  // Increased from 3.5 for easier vertical navigation
         normalizedX = (normalizedX - 0.5) * sensitivityX + 0.5;
         normalizedY = (normalizedY - 0.5) * sensitivityY + 0.5;
 
@@ -419,10 +419,15 @@ async function speakText(text, emotion) {
         console.log('Speed (from emotion):', voiceParams.speed);
         console.log('Volume (from emotion):', voiceParams.volume);
 
+        // Convert numbers to words for better TTS pronunciation
+        const processedText = convertTextNumbers(text);
+        console.log('Original text:', text);
+        console.log('Processed text (numbers→words):', processedText);
+
         // Prepare request payload with correct Fish Audio API format
         // Speed and volume must be nested inside 'prosody' object
         const requestBody = {
-            text: text,  // Original text without prefixes
+            text: processedText,  // Text with numbers converted to words
             reference_id: voiceReferenceId, // Male or Female voice
             format: 'mp3',
             mp3_bitrate: 128,
@@ -558,17 +563,17 @@ function speakWithWebSpeech(text, emotion) {
     utterance.volume = 1.0;
 
     if (emotion === 'happy') {
-        utterance.rate = 1.3;   // Much faster for happiness
-        utterance.pitch = 1.4;  // Higher pitch for cheerfulness
+        utterance.rate = 1.0;   // Much faster for happiness
+        utterance.pitch = 1.3;  // Higher pitch for cheerfulness
     } else if (emotion === 'sad') {
-        utterance.rate = 0.7;   // Much slower for sadness
-        utterance.pitch = 0.7;  // Lower pitch for melancholy
+        utterance.rate = 0.5;   // Much slower for sadness
+        utterance.pitch = 1.5;  // Lower pitch for melancholy
     } else if (emotion === 'angry') {
-        utterance.rate = 1.2;   // Faster for intensity
-        utterance.pitch = 0.8;  // Lower pitch for anger
+        utterance.rate = 1.5;   // Faster for intensity
+        utterance.pitch = 0.5;  // Lower pitch for anger
     } else if (emotion === 'surprised') {
-        utterance.rate = 1.5;   // Very fast for surprise
-        utterance.pitch = 1.5;  // Very high pitch for excitement
+        utterance.rate = 2.0;   // Very fast for surprise
+        utterance.pitch = 2.5;  // Very high pitch for excitement
     }
 
     console.log('Speech parameters:', {
@@ -669,7 +674,7 @@ function stopTracking() {
         video.srcObject = null;
     }
 
-    cursor.classList.remove('active');
+    keyboardCursor.classList.remove('active');
     canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
 
     isTracking = false;
