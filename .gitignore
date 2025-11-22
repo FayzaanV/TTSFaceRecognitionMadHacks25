@@ -4,3 +4,20 @@
 # Configuration with API keys (should be environment variables in production)
 # Uncommenting this would exclude config.js from git
 # config.js
+
+# Audio files (too large for git)
+dummy_output.wav
+*.wav
+*.mp3
+*.ogg
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv

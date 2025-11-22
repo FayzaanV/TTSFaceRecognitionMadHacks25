@@ -54,17 +54,37 @@ git clone https://github.com/anishsrinivasa/MadHacksSubmission2025.git
 cd MadHacksSubmission2025
 ```
 
-2. Open `index.html` in a web browser, or serve it using a local server:
+2. **Set up the Python backend:**
 
 ```bash
-# Using Python
-python3 -m http.server 8000
+# Install Python dependencies
+pip install -r requirements.txt
 
-# Using Node.js (if you have http-server installed)
-npx http-server -p 8000
+# Create a dummy audio file (or use your own)
+# The backend expects dummy_output.wav in the same directory
 ```
 
-3. Navigate to `http://localhost:8000` in your browser
+3. **Start the backend server:**
+
+```bash
+python main.py
+```
+
+The backend will run on `http://127.0.0.1:8000`
+
+4. **Start the frontend:**
+
+Open `index.html` in a web browser, or serve it using a local server:
+
+```bash
+# Using Python (on a different port, e.g., 8080)
+python3 -m http.server 8080
+
+# Using Node.js (if you have http-server installed)
+npx http-server -p 8080
+```
+
+5. Navigate to `http://localhost:8080` in your browser (or the port you chose)
 
 ### Configuration
 
@@ -123,6 +143,8 @@ MadHacksSubmission2025/
 ├── app.js              # Core application logic (nose tracking, emotion detection, TTS)
 ├── config.js           # Configuration (API keys, settings)
 ├── style.css           # Styling
+├── main.py             # Python backend (FastAPI server)
+├── requirements.txt    # Python dependencies
 └── README.md           # This file
 ```
 

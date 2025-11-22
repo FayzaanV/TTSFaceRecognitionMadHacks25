@@ -306,23 +306,15 @@ async function speakText(text, emotion) {
         status.textContent = 'Generating speech...';
         status.style.color = '#3b82f6';
 
-        // Get voice parameters based on emotion
-        const voiceParams = CONFIG.EMOTION_VOICE_PARAMS[emotion] || CONFIG.EMOTION_VOICE_PARAMS.neutral;
-
-        // Call Fish Audio API
-        const response = await fetch(`${CONFIG.FISH_AUDIO_BASE_URL}/tts`, {
+        // Call local backend API
+        const response = await fetch('http://127.0.0.1:8000/generate_speech', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${CONFIG.FISH_AUDIO_API_KEY}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 text: text,
-                reference_id: 'default', // You can customize this
-                format: 'mp3',
-                mp3_bitrate: 128,
-                normalize: true,
-                speed: voiceParams.speed || 1.0
+                emotion: emotion
             })
         });
 
