@@ -16,11 +16,13 @@ const emotionIcon = document.getElementById('emotionIcon');
 const emotionLabel = document.getElementById('emotionLabel');
 const confidenceFill = document.getElementById('confidenceFill');
 const confidenceText = document.getElementById('confidenceText');
+const voiceRadios = document.querySelectorAll('input[name="voice"]');
 
 // State
 let camera = null;
 let faceMesh = null;
 let isTracking = false;
+let selectedVoice = 'female'; // Default voice selection
 
 // Smoothing variables
 let smoothedX = 0;
@@ -309,6 +311,9 @@ async function speakText(text, emotion) {
         // Get voice parameters based on emotion
         const voiceParams = CONFIG.EMOTION_VOICE_PARAMS[emotion] || CONFIG.EMOTION_VOICE_PARAMS.neutral;
 
+        // Get selected voice reference ID
+        const voiceReferenceId = CONFIG.VOICE_REFERENCES[selectedVoice];
+
         // Call Fish Audio API
         const response = await fetch(`${CONFIG.FISH_AUDIO_BASE_URL}/tts`, {
             method: 'POST',
@@ -318,7 +323,7 @@ async function speakText(text, emotion) {
             },
             body: JSON.stringify({
                 text: text,
-                reference_id: 'default', // You can customize this
+                reference_id: voiceReferenceId, // Use selected voice (male/female)
                 format: 'mp3',
                 mp3_bitrate: 128,
                 normalize: true,
@@ -449,6 +454,14 @@ function stopTracking() {
 // Event listeners
 startBtn.addEventListener('click', startTracking);
 stopBtn.addEventListener('click', stopTracking);
+
+// Voice selection event listeners
+voiceRadios.forEach(radio => {
+    radio.addEventListener('change', (e) => {
+        selectedVoice = e.target.value;
+        console.log(`Voice changed to: ${selectedVoice}`);
+    });
+});
 
 // Initialize
 status.textContent = 'Click "Start Camera" to begin';
