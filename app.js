@@ -342,12 +342,9 @@ async function speakText(text, emotion) {
         console.log('Voice Reference ID:', voiceReferenceId);
         console.log('Speed (from emotion):', voiceParams.speed);
 
-        // Prepare emotional text with context prefix
-        const emotionalText = (voiceParams.prefix || '') + text;
-
-        // Prepare request payload
+        // Prepare request payload (emotion conveyed through speed only)
         const requestBody = {
-            text: emotionalText,  // Text with emotional context
+            text: text,  // Original text without prefixes
             reference_id: voiceReferenceId, // Male or Female voice
             format: 'mp3',
             mp3_bitrate: 128,
