@@ -215,6 +215,8 @@ function selectKey(key) {
         currentText = '';
     } else if (keyValue === 'ENTER') {
         // Trigger text-to-speech with detected emotion
+        // Debug: Log what we're about to send
+        console.log('About to speak:', { text: currentText, emotion: currentEmotion });
         speakText(currentText, currentEmotion);
     } else {
         currentText += keyValue;
@@ -285,28 +287,57 @@ function detectEmotion(landmarks) {
 
 // Update emotion UI
 function updateEmotionUI(emotion, confidence) {
+    // Ensure emotion is valid
+    const validEmotions = ['happy', 'sad', 'neutral', 'surprised', 'angry'];
+    if (!validEmotions.includes(emotion)) {
+        console.warn(`Invalid emotion detected: ${emotion}, defaulting to neutral`);
+        emotion = 'neutral';
+    }
+    
     currentEmotion = emotion;
     emotionConfidence = confidence;
 
-    emotionIcon.textContent = EMOTION_ICONS[emotion];
+    emotionIcon.textContent = EMOTION_ICONS[emotion] || EMOTION_ICONS['neutral'];
     emotionLabel.textContent = emotion.charAt(0).toUpperCase() + emotion.slice(1);
     confidenceFill.style.width = `${confidence * 100}%`;
     confidenceText.textContent = `${Math.round(confidence * 100)}%`;
+    
+    // Debug: Log emotion update to verify it matches what will be sent
+    console.log(`Emotion UI updated: ${emotion} (confidence: ${Math.round(confidence * 100)}%)`);
 }
 
 // Fish Audio TTS function
 async function speakText(text, emotion) {
+    // Validate inputs
     if (!text || text.trim() === '') {
         alert('Please type some text first!');
         return;
+    }
+    
+    // Ensure emotion is valid, default to neutral
+    if (!emotion || emotion.trim() === '') {
+        emotion = 'neutral';
+    }
+    
+    // Debug: Log what we're sending
+    console.log('Sending to backend:', { 
+        text: text, 
+        emotion: emotion,
+        textLength: text.length,
+        emotionLength: emotion.length
+    });
+    
+    // Verify emotion displayed matches what we're sending
+    const displayedEmotion = emotionLabel.textContent.toLowerCase();
+    if (displayedEmotion !== emotion.toLowerCase()) {
+        console.warn(`Emotion mismatch! Displayed: ${displayedEmotion}, Sending: ${emotion}`);
     }
 
     try {
         // Show loading state
         status.textContent = 'Generating speech...';
         status.style.color = '#3b82f6';
-
-        // Call local backend API
+        
         const response = await fetch('http://127.0.0.1:8000/generate_speech', {
             method: 'POST',
             headers: {
@@ -425,7 +456,7 @@ function stopTracking() {
         video.srcObject = null;
     }
 
-    cursor.classList.remove('active');
+    keyboardCursor.classList.remove('active');
     canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
 
     isTracking = false;
