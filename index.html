@@ -10,19 +10,13 @@
     <div class="container">
         <header>
             <h1>Nose Tracking System</h1>
-            <p>Phase 3: Emotion Detection & Text-to-Speech</p>
+            <p>Move your nose to navigate the keyboard. Hover over a key for 1.0 second to select it.</p>
         </header>
 
         <div class="main-grid">
             <!-- Left side: Main content -->
             <div class="main-content">
-                <div class="text-display">
-                    <label>Your Text:</label>
-                    <div id="textOutput" class="text-output"></div>
-                </div>
-
                 <div class="keyboard-container">
-                    <h3>Virtual Keyboard</h3>
                     <div class="keyboard-wrapper">
                         <div id="keyboardCursor" class="keyboard-cursor"></div>
                         <div class="keyboard" id="keyboard">
@@ -83,7 +77,11 @@
                 </div>
             </div>
                         </div>
-                        <div class="dwell-info">Hover over a key for 0.5s to select it</div>
+                </div>
+                
+                <div class="text-display">
+                    <label>Your Text:</label>
+                    <div id="textOutput" class="text-output"></div>
                 </div>
             </div>
 

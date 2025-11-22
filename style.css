@@ -91,8 +91,8 @@ header p {
 
 .keyboard-cursor {
     position: absolute;
-    width: 35px;
-    height: 35px;
+    width: 50px;
+    height: 50px;
     background: radial-gradient(circle, rgba(59, 130, 246, 0.9) 0%, rgba(59, 130, 246, 0.6) 100%);
     border: 4px solid white;
     border-radius: 50%;
@@ -114,8 +114,8 @@ header p {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 10px;
-    height: 10px;
+    width: 14px;
+    height: 14px;
     background: white;
     border-radius: 50%;
     box-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
@@ -276,27 +276,27 @@ button:disabled {
 .keyboard {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 12px;
     background: #f3f4f6;
-    padding: 20px;
+    padding: 25px;
     border-radius: 15px;
-    max-width: 700px;
+    max-width: 1000px;
     margin: 0 auto;
 }
 
 .keyboard-row {
     display: flex;
     justify-content: center;
-    gap: 8px;
+    gap: 12px;
 }
 
 .key {
-    min-width: 50px;
-    height: 50px;
+    min-width: 70px;
+    height: 70px;
     background: white;
     border: 2px solid #d1d5db;
-    border-radius: 8px;
-    font-size: 1.2rem;
+    border-radius: 10px;
+    font-size: 1.6rem;
     font-weight: 600;
     color: #374151;
     cursor: pointer;
@@ -336,7 +336,7 @@ button:disabled {
 }
 
 .key.hovering::before {
-    animation: dwellProgress 0.5s linear forwards;
+    animation: dwellProgress 1.0s linear forwards;
 }
 
 @keyframes dwellProgress {
@@ -359,7 +359,7 @@ button:disabled {
 
 .space-key {
     flex-grow: 2;
-    min-width: 200px;
+    min-width: 300px;
 }
 
 .enter-key {
@@ -380,8 +380,11 @@ button:disabled {
     text-align: center;
     color: #6b7280;
     font-size: 0.9rem;
-    margin-top: 15px;
+    margin-bottom: 10px;
     font-style: italic;
+    padding: 8px;
+    background: #f9fafb;
+    border-radius: 8px;
 }
 
 @media (max-width: 1024px) {

@@ -31,7 +31,7 @@ const smoothingFactor = 0.3; // Lower = smoother but more lag
 let currentText = '';
 let hoveredKey = null;
 let dwellStartTime = null;
-const dwellTime = 500; // 0.5 seconds in milliseconds
+const dwellTime = 1000; // 1.0 second in milliseconds
 let dwellTimeout = null;
 
 // Emotion state
@@ -113,7 +113,8 @@ function onResults(results) {
         let normalizedY = noseTip.y;
 
         // Apply sensitivity multiplier for easier movement
-        const sensitivity = 1.4;
+        // Increased sensitivity for easier cursor movement
+        const sensitivity = 4.25;
         normalizedX = (normalizedX - 0.5) * sensitivity + 0.5;
         normalizedY = (normalizedY - 0.5) * sensitivity + 0.5;
 
