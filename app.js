@@ -755,24 +755,20 @@ async function speakText(text, emotion) {
         console.log('Original text:', text);
         console.log('Processed text (numbers→words):', processedText);
 
-        // Prepare request payload with correct Fish Audio API format
-        // Speed and volume must be nested inside 'prosody' object
+        // Prepare request payload for FastAPI backend
+        // Include user_id to retrieve cloned voice if available
         const requestBody = {
             text: processedText,  // Text with numbers converted to words
-            reference_id: voiceReferenceId, // Male or Female voice
-            format: 'mp3',
-            mp3_bitrate: 128,
-            normalize: true,
-            prosody: {
-                speed: voiceParams.speed || 1.0,  // Speech speed multiplier (0.5-2.0)
-                volume: voiceParams.volume || 0   // Volume adjustment in dB
-            }
+            emotion: emotion,
+            user_id: USER_ID  // Include user ID for voice cloning
         };
 
         console.log('Request Body:', JSON.stringify(requestBody, null, 2));
+        console.log('User ID:', USER_ID);
+        console.log('User Voice ID:', userVoiceId || 'None (will use default)');
 
-        // Call local proxy server (avoids CORS issues)
-        const response = await fetch('http://localhost:5000/tts', {
+        // Call FastAPI backend
+        const response = await fetch('http://127.0.0.1:8000/generate_speech', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -1050,6 +1046,404 @@ voiceRadios.forEach(radio => {
 initEmotionModel().catch(error => {
     console.error('Failed to initialize emotion models:', error);
 });
+
+// ========== VOICE CLONING FUNCTIONALITY ==========
+// Voice cloning state
+let mediaRecorder = null;
+let audioChunks = [];
+let recordingStartTime = null;
+let recordingTimerInterval = null;
+let userVoiceId = null;
+const RECORDING_DURATION = 30000; // 30 seconds in milliseconds
+const USER_ID = localStorage.getItem('userId') || `user_${Date.now()}`;
+
+// Store user ID in localStorage
+localStorage.setItem('userId', USER_ID);
+
+// DOM elements for voice cloning
+const voiceStatusText = document.getElementById('voiceStatusText');
+const voiceSetupContainer = document.getElementById('voiceSetupContainer');
+const startRecordingBtn = document.getElementById('startRecordingBtn');
+const stopRecordingBtn = document.getElementById('stopRecordingBtn');
+const recordingTimer = document.getElementById('recordingTimer');
+const timerDisplay = document.getElementById('timerDisplay');
+const recordingProgress = document.getElementById('recordingProgress');
+const progressBar = document.getElementById('progressBar');
+const uploadStatus = document.getElementById('uploadStatus');
+const uploadStatusText = document.getElementById('uploadStatusText');
+
+// File upload elements
+const recordModeBtn = document.getElementById('recordModeBtn');
+const uploadModeBtn = document.getElementById('uploadModeBtn');
+const recordingMode = document.getElementById('recordingMode');
+const uploadMode = document.getElementById('uploadMode');
+const audioFileInput = document.getElementById('audioFileInput');
+const selectedFileName = document.getElementById('selectedFileName');
+const uploadFileBtn = document.getElementById('uploadFileBtn');
+let selectedAudioFile = null;
+
+// Check voice status on page load
+async function checkVoiceStatus() {
+    try {
+        const response = await fetch(`http://127.0.0.1:8000/api/voice-status?user_id=${encodeURIComponent(USER_ID)}`);
+        const data = await response.json();
+        
+        if (data.has_voice) {
+            userVoiceId = data.voice_id;
+            voiceStatusText.textContent = '✅ Personal Voice Activated';
+            voiceStatusText.style.color = '#10b981';
+            voiceSetupContainer.style.display = 'none';
+        } else {
+            voiceStatusText.textContent = '⚠️ Voice Model Not Setup';
+            voiceStatusText.style.color = '#f59e0b';
+            voiceSetupContainer.style.display = 'block';
+        }
+    } catch (error) {
+        console.error('Error checking voice status:', error);
+        voiceStatusText.textContent = '❌ Error checking status';
+        voiceStatusText.style.color = '#ef4444';
+        voiceSetupContainer.style.display = 'block';
+    }
+}
+
+// Start recording
+async function startRecording() {
+    try {
+        // Request microphone access
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        
+        // Create MediaRecorder
+        mediaRecorder = new MediaRecorder(stream, {
+            mimeType: 'audio/webm;codecs=opus' // Use WebM for better browser support
+        });
+        
+        audioChunks = [];
+        
+        mediaRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0) {
+                audioChunks.push(event.data);
+            }
+        };
+        
+        mediaRecorder.onstop = async () => {
+            // Stop all tracks
+            stream.getTracks().forEach(track => track.stop());
+            
+            // Create audio blob
+            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            
+            // Convert to WAV format for better compatibility
+            const wavBlob = await convertToWav(audioBlob);
+            
+            // Upload and create voice model
+            await uploadAndCreateVoice(wavBlob);
+        };
+        
+        // Start recording
+        mediaRecorder.start();
+        recordingStartTime = Date.now();
+        
+        // Update UI
+        startRecordingBtn.style.display = 'none';
+        stopRecordingBtn.style.display = 'inline-block';
+        stopRecordingBtn.disabled = false;
+        recordingTimer.style.display = 'block';
+        recordingProgress.style.display = 'block';
+        
+        // Start timer
+        updateTimer();
+        recordingTimerInterval = setInterval(updateTimer, 100);
+        
+        // Auto-stop after 30 seconds
+        setTimeout(() => {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                stopRecording();
+            }
+        }, RECORDING_DURATION);
+        
+    } catch (error) {
+        console.error('Error starting recording:', error);
+        alert('Failed to start recording. Please allow microphone access.');
+    }
+}
+
+// Stop recording
+function stopRecording() {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+        
+        // Clear timer
+        if (recordingTimerInterval) {
+            clearInterval(recordingTimerInterval);
+            recordingTimerInterval = null;
+        }
+        
+        // Update UI
+        stopRecordingBtn.disabled = true;
+        stopRecordingBtn.textContent = 'Processing...';
+    }
+}
+
+// Update recording timer
+function updateTimer() {
+    if (!recordingStartTime) return;
+    
+    const elapsed = Date.now() - recordingStartTime;
+    const seconds = Math.floor(elapsed / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const displaySeconds = seconds % 60;
+    
+    timerDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(displaySeconds).padStart(2, '0')}`;
+    
+    // Update progress bar
+    const progress = Math.min((elapsed / RECORDING_DURATION) * 100, 100);
+    progressBar.style.width = `${progress}%`;
+    
+    // Auto-stop at 30 seconds
+    if (elapsed >= RECORDING_DURATION) {
+        stopRecording();
+    }
+}
+
+// Convert audio blob to WAV format
+async function convertToWav(audioBlob) {
+    try {
+        // For simplicity, we'll use the WebM format directly
+        // Fish Audio API should accept WebM, but if not, we can convert server-side
+        // For now, return the original blob
+        return audioBlob;
+    } catch (error) {
+        console.error('Error converting to WAV:', error);
+        return audioBlob; // Fallback to original
+    }
+}
+
+// Upload audio and create voice model with retry logic
+// Accepts either a Blob (from recording) or a File (from file input)
+async function uploadAndCreateVoice(audioBlobOrFile) {
+    uploadStatus.style.display = 'block';
+    uploadStatusText.textContent = 'Uploading audio and creating voice model...';
+    
+    const formData = new FormData();
+    
+    // Handle both Blob (from recording) and File (from file input)
+    if (audioBlobOrFile instanceof File) {
+        formData.append('audio_file', audioBlobOrFile);
+    } else {
+        // It's a Blob from recording
+        formData.append('audio_file', audioBlobOrFile, 'voice_recording.webm');
+    }
+    
+    formData.append('user_id', USER_ID);
+    
+    const maxRetries = 3;
+    let retryDelay = 1;
+    
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+            uploadStatusText.textContent = `Uploading... (Attempt ${attempt + 1}/${maxRetries})`;
+            
+            const response = await fetch('http://127.0.0.1:8000/api/create-voice', {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP ${response.status}: ${errorText}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.success && data.voice_id) {
+                userVoiceId = data.voice_id;
+                uploadStatusText.textContent = '✅ Voice model created successfully!';
+                uploadStatusText.style.color = '#10b981';
+                
+                // Update voice status
+                setTimeout(() => {
+                    checkVoiceStatus();
+                    uploadStatus.style.display = 'none';
+                }, 2000);
+                
+                return;
+            } else {
+                throw new Error('Voice creation failed: ' + (data.message || 'Unknown error'));
+            }
+            
+        } catch (error) {
+            console.error(`Attempt ${attempt + 1} failed:`, error);
+            
+            if (attempt < maxRetries - 1) {
+                const waitTime = retryDelay * Math.pow(2, attempt); // Exponential backoff
+                uploadStatusText.textContent = `Error: ${error.message}. Retrying in ${waitTime}s...`;
+                await new Promise(resolve => setTimeout(resolve, waitTime * 1000));
+            } else {
+                uploadStatusText.textContent = `❌ Failed to create voice model: ${error.message}`;
+                uploadStatusText.style.color = '#ef4444';
+                // Reset appropriate button based on mode
+                if (stopRecordingBtn) {
+                    stopRecordingBtn.textContent = 'Try Again';
+                    stopRecordingBtn.disabled = false;
+                }
+                if (uploadFileBtn) {
+                    uploadFileBtn.textContent = 'Upload & Create Voice';
+                    uploadFileBtn.disabled = false;
+                }
+            }
+        }
+    }
+}
+
+// Toggle between record and upload modes
+function switchToRecordMode() {
+    recordModeBtn.classList.add('active');
+    uploadModeBtn.classList.remove('active');
+    recordingMode.style.display = 'block';
+    uploadMode.style.display = 'none';
+    selectedAudioFile = null;
+    audioFileInput.value = '';
+    selectedFileName.style.display = 'none';
+    uploadFileBtn.disabled = true;
+}
+
+function switchToUploadMode() {
+    uploadModeBtn.classList.add('active');
+    recordModeBtn.classList.remove('active');
+    uploadMode.style.display = 'block';
+    recordingMode.style.display = 'none';
+}
+
+recordModeBtn.addEventListener('click', switchToRecordMode);
+uploadModeBtn.addEventListener('click', switchToUploadMode);
+
+// Handle file selection
+audioFileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        // Validate file type
+        if (!file.type.startsWith('audio/')) {
+            alert('Please select an audio file.');
+            audioFileInput.value = '';
+            return;
+        }
+        
+        // Validate file size (max 10MB)
+        if (file.size > 10 * 1024 * 1024) {
+            alert('File is too large. Maximum size is 10MB.');
+            audioFileInput.value = '';
+            return;
+        }
+        
+        selectedAudioFile = file;
+        selectedFileName.textContent = `Selected: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+        selectedFileName.style.display = 'block';
+        uploadFileBtn.disabled = false;
+    }
+});
+
+// Handle file upload
+uploadFileBtn.addEventListener('click', async () => {
+    if (!selectedAudioFile) {
+        alert('Please select an audio file first.');
+        return;
+    }
+    
+    // Disable button during upload
+    uploadFileBtn.disabled = true;
+    uploadFileBtn.textContent = 'Uploading...';
+    
+    // Upload and create voice
+    await uploadAndCreateVoice(selectedAudioFile);
+    
+    // Reset UI
+    uploadFileBtn.textContent = 'Upload & Create Voice';
+    uploadFileBtn.disabled = false;
+});
+
+// Manual Voice ID Entry
+const manualVoiceIdInput = document.getElementById('manualVoiceIdInput');
+const saveVoiceIdBtn = document.getElementById('saveVoiceIdBtn');
+
+saveVoiceIdBtn.addEventListener('click', async () => {
+    const voiceId = manualVoiceIdInput.value.trim();
+    
+    if (!voiceId) {
+        alert('Please enter a voice ID.');
+        return;
+    }
+    
+    // Validate voice ID format (basic check)
+    if (voiceId.length < 10) {
+        alert('Voice ID seems too short. Please check and try again.');
+        return;
+    }
+    
+    saveVoiceIdBtn.disabled = true;
+    saveVoiceIdBtn.textContent = 'Saving...';
+    
+    try {
+        // Save the voice ID directly to storage via backend
+        // We'll create a simple endpoint for this, or use localStorage + backend sync
+        userVoiceId = voiceId;
+        
+        // Save to backend storage
+        const response = await fetch(`http://127.0.0.1:8000/api/save-voice-id`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                user_id: USER_ID,
+                voice_id: voiceId
+            })
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+                uploadStatus.style.display = 'block';
+                uploadStatusText.textContent = '✅ Voice ID saved successfully!';
+                uploadStatusText.style.color = '#10b981';
+                
+                // Update voice status
+                setTimeout(() => {
+                    checkVoiceStatus();
+                    uploadStatus.style.display = 'none';
+                }, 2000);
+            } else {
+                throw new Error(data.message || 'Failed to save voice ID');
+            }
+        } else {
+            const errorText = await response.text();
+            throw new Error(`Server error: ${errorText}`);
+        }
+    } catch (error) {
+        console.error('Error saving voice ID:', error);
+        uploadStatus.style.display = 'block';
+        uploadStatusText.textContent = `❌ Failed to save voice ID: ${error.message}`;
+        uploadStatusText.style.color = '#ef4444';
+    } finally {
+        saveVoiceIdBtn.disabled = false;
+        saveVoiceIdBtn.textContent = 'Save Voice ID';
+    }
+});
+
+// Event listeners for recording
+startRecordingBtn.addEventListener('click', startRecording);
+stopRecordingBtn.addEventListener('click', stopRecording);
+
+// Check voice status on page load
+checkVoiceStatus();
+
+// ========== UPDATE TTS GENERATION TO USE CLONED VOICE ==========
+// Modify the existing speakText function to include user_id
+// Find the speakText function and update it
+const originalSpeakText = window.speakText;
+if (typeof originalSpeakText === 'function') {
+    // The function is already defined, we'll need to modify it
+    // For now, we'll create a wrapper that adds user_id
+}
 
 // Initialize
 status.textContent = 'Click "Start Camera" to begin';

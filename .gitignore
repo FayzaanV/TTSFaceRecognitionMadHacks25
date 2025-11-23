@@ -16,3 +16,6 @@ ENV/
 # Configuration with API keys (should be environment variables in production)
 # Uncommenting this would exclude config.js from git
 # config.js
+
+# Voice storage (contains user voice IDs)
+voice_storage.json
