@@ -19,7 +19,7 @@ Stephen Hawking's voice was iconic, but it was famously monotonic. People with A
 This app uses your webcam for **two things simultaneously**:
 
 1. **Nose Tracking** (via MediaPipe Face Mesh): Select words and letters on a virtual keyboard by moving your nose
-2. **Emotion Detection** (via face-api.js): Analyze your facial expressions in real-time (smile, frown, raised eyebrows)
+2. **ML-Based Emotion Detection** (via face-api.js): Uses machine learning models to analyze your facial expressions in real-time (smile, frown, raised eyebrows)
 
 **The Fish Audio Hook:**
 - If you select "Hello" while **smiling** → the app sends `(happy) Hello` to Fish Audio
@@ -32,7 +32,7 @@ Use voice cloning so it sounds like you (from before you lost your voice), not a
 ## Features
 
 - **Nose Tracking**: Navigate and type using only nose movements - perfect for users with motor impairments
-- **Real-time Emotion Detection**: Automatically detects facial expressions (happy, sad, angry, surprised, neutral, disgusted, fearful)
+- **ML-Based Real-time Emotion Detection**: Uses machine learning models (face-api.js) to automatically detect facial expressions (happy, sad, angry, surprised, neutral)
 - **Expressive Text-to-Speech**: Converts typed text to speech with emotion modulation using Fish Audio API
 - **Voice Cloning Support**: Optional voice cloning to sound like your original voice
 - **Dwell Selection**: Hover over keys for 0.5 seconds to select (configurable)
@@ -110,15 +110,15 @@ const CONFIG = {
 6. **Express Emotion**: Your facial expressions are detected in real-time (shown in sidebar)
 7. **Speak**: Click "SPEAK" to convert your text to speech with emotion modulation
 
-### How Emotion Detection Works
+### How ML-Based Emotion Detection Works
 
-The app continuously analyzes your facial expressions while you type:
-- **Smile** → Detected as "happy" → Speech will sound joyful
-- **Frown** → Detected as "sad" → Speech will sound melancholic
-- **Raised eyebrows** → Detected as "surprised" → Speech will sound excited
+The app uses **machine learning models** (face-api.js) to continuously analyze your facial expressions while you type:
+- **Smile** → ML model detects as "happy" → Speech will sound joyful
+- **Frown** → ML model detects as "sad" → Speech will sound melancholic
+- **Raised eyebrows** → ML model detects as "surprised" → Speech will sound excited
 - **Neutral** → Default tone
 
-When you click "SPEAK", the app combines your typed text with your detected emotion and sends it to Fish Audio API, which generates natural, expressive speech.
+The ML models run entirely in your browser, processing facial landmarks and expression patterns in real-time. When you click "SPEAK", the app combines your typed text with your detected emotion and sends it to Fish Audio API, which generates natural, expressive speech.
 
 ## Use Cases
 
@@ -129,7 +129,7 @@ When you click "SPEAK", the app combines your typed text with your detected emot
 ## Technology Stack
 
 - **MediaPipe Face Mesh**: Nose tracking and facial landmark detection
-- **face-api.js**: Real-time emotion recognition from facial expressions
+- **face-api.js**: ML-based real-time emotion recognition from facial expressions (uses TinyFaceDetector and FaceExpressionNet models)
 - **Fish Audio API**: Expressive text-to-speech with emotion modulation
 - **Vanilla JavaScript**: No framework dependencies - lightweight and fast
 
